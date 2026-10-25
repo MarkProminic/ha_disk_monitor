@@ -56,7 +56,7 @@ jobs:
         if: ${{ steps.release.outputs.release_created }}
 
       - name: "Upload the ZIP file to the release"
-        uses: softprops/action-gh-release@v2.5.0
+        uses: softprops/action-gh-release@v3.0.3
         with:
           files: ${{ github.workspace }}/custom_components/ha_disk_monitor/ha_disk_monitor.zip
           tag_name: ${{ steps.previoustag.outputs.tag }}

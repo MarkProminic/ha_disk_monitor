@@ -1,0 +1,64 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configure Disk Monitor",
+        "description": "Point at a disk-agent. Give either its setup token, read from /etc/disk-agent/setup.token on the host, or an API key it already issued.",
+        "data": {
+          "host": "Host name or address of the disk-agent",
+          "port": "Port (9431 for HTTPS, 9430 for HTTP)",
+          "use_ssl": "Use HTTPS",
+          "verify_ssl": "Verify the HTTPS certificate",
+          "setup_token": "Setup token (mints an API key)",
+          "api_key": "API key (when one already exists)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "The disk-agent could not be reached.",
+      "invalid_auth": "The disk-agent refused the credential.",
+      "credential_required": "Give the setup token or an API key."
+    },
+    "abort": {
+      "already_configured": "This host is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Disk Monitor options",
+        "data": {
+          "scan_interval": "Seconds between polls"
+        }
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "smart_problem": { "name": "SMART problem" },
+      "pool_problem": { "name": "Pool problem" }
+    },
+    "sensor": {
+      "temperature": { "name": "Temperature" },
+      "power_on_hours": { "name": "Power-on hours" },
+      "reallocated_sectors": { "name": "Reallocated sectors" },
+      "pending_sectors": { "name": "Pending sectors" },
+      "offline_uncorrectable": { "name": "Offline uncorrectable" },
+      "reported_uncorrect": { "name": "Reported uncorrectable" },
+      "grown_defects": { "name": "Grown defects" },
+      "uncorrected_read_errors": { "name": "Uncorrected read errors" },
+      "uncorrected_write_errors": { "name": "Uncorrected write errors" },
+      "percentage_used": { "name": "Percentage used" },
+      "media_errors": { "name": "Media errors" },
+      "unsafe_shutdowns": { "name": "Unsafe shutdowns" },
+      "health": { "name": "Health" },
+      "capacity": { "name": "Capacity" },
+      "fragmentation": { "name": "Fragmentation" },
+      "size": { "name": "Size" },
+      "allocated": { "name": "Allocated" },
+      "free": { "name": "Free" },
+      "scan": { "name": "Last scan" },
+      "unreadable_devices": { "name": "Unreadable devices" }
+    }
+  }
+}

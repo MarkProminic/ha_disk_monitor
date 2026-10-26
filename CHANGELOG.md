@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/MarkProminic/ha_disk_monitor/compare/v0.2.0...v0.2.1) (2026-10-26)
+
+
+### Bug Fixes
+
+* keep devices through failed collections and re-add returning rows ([02c5486](https://github.com/MarkProminic/ha_disk_monitor/commit/02c54867099ca7df7acd1d05cfe081f4859b5315))
+
 ## [0.2.0](https://github.com/MarkProminic/ha_disk_monitor/compare/v0.1.0...v0.2.0) (2026-10-26)
 
 

@@ -122,19 +122,23 @@ def pool_sensors(coordinator: DiskMonitorCoordinator, name: str) -> list[SensorE
 
 
 def track_new_rows(coordinator: DiskMonitorCoordinator, async_add_entities: AddEntitiesCallback, build_disk: Callable, build_pool: Callable) -> Callable[[], None]:
-    """Add entities for the current rows, then for every row that appears later."""
+    """Add entities for the current rows, then for every row that appears or returns later."""
     seen_disks: set[str] = set()
     seen_pools: set[str] = set()
 
     @callback
     def add_new() -> None:
+        disks = set(coordinator.data[DATA_DISKS])
+        pools = set(coordinator.data[DATA_POOLS])
         new = []
-        for serial in set(coordinator.data[DATA_DISKS]) - seen_disks:
+        for serial in disks - seen_disks:
             new.extend(build_disk(coordinator, serial))
-            seen_disks.add(serial)
-        for name in set(coordinator.data[DATA_POOLS]) - seen_pools:
+        for name in pools - seen_pools:
             new.extend(build_pool(coordinator, name))
-            seen_pools.add(name)
+        seen_disks.intersection_update(disks)
+        seen_disks.update(disks)
+        seen_pools.intersection_update(pools)
+        seen_pools.update(pools)
         if new:
             async_add_entities(new)
 

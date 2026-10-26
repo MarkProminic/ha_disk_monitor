@@ -62,7 +62,8 @@ class DiskMonitorCoordinator(DataUpdateCoordinator[dict]):
 
     data holds hostname, collected_at, disks keyed by serial, pools keyed by
     name and the unreadable device list. Devices for disks and pools that
-    left the report are removed from the device registry. A disk or pool
+    left a report whose collection succeeded are removed from the device
+    registry; a report carrying disk_error or pool_error changes nothing. A disk or pool
     that becomes a problem raises a persistent notification and a message to
     the configured mobile devices once, until it clears and fails again.
     """
@@ -98,22 +99,19 @@ class DiskMonitorCoordinator(DataUpdateCoordinator[dict]):
             DATA_POOLS: pools,
             DATA_UNREADABLE: report.get("unreadable", []),
         }
-        self._remove_departed(set(disks), set(pools))
-        self.known_disks = set(disks)
-        self.known_pools = set(pools)
+        if report.get("disk_error") is None:
+            self._remove_departed(self.known_disks - set(disks), disk_device_id)
+            self.known_disks = set(disks)
+        if report.get("pool_error") is None:
+            self._remove_departed(self.known_pools - set(pools), pool_device_id)
+            self.known_pools = set(pools)
         await self._notify_problems(hostname, disks, pools)
         return data
 
-    def _remove_departed(self, disks: set[str], pools: set[str]) -> None:
-        if not self.known_disks and not self.known_pools:
-            return
+    def _remove_departed(self, departed: set[str], device_id) -> None:
         registry = dr.async_get(self.hass)
-        for serial in self.known_disks - disks:
-            device = registry.async_get_device(identifiers={(DOMAIN, disk_device_id(self.entry.entry_id, serial))})
-            if device:
-                registry.async_remove_device(device.id)
-        for name in self.known_pools - pools:
-            device = registry.async_get_device(identifiers={(DOMAIN, pool_device_id(self.entry.entry_id, name))})
+        for key in departed:
+            device = registry.async_get_device(identifiers={(DOMAIN, device_id(self.entry.entry_id, key))})
             if device:
                 registry.async_remove_device(device.id)
 

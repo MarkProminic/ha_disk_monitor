@@ -3,34 +3,41 @@
     "step": {
       "user": {
         "title": "Configure Disk Monitor",
-        "description": "Point at a disk-agent. Give either its setup token, read from /etc/disk-agent/setup.token on the host, or an API key it already issued.",
+        "description": "Point at a disk-agent. The API key is either one the agent already issued or the setup token read from /etc/disk-agent/setup.token on the host, which mints one.",
         "data": {
           "host": "Host name or address of the disk-agent",
           "port": "Port (9431 for HTTPS, 9430 for HTTP)",
           "use_ssl": "Use HTTPS",
           "verify_ssl": "Verify the HTTPS certificate",
-          "setup_token": "Setup token (mints an API key)",
-          "api_key": "API key (when one already exists)"
+          "api_key": "API key",
+          "scan_interval": "Seconds between polls",
+          "persistent_notifications": "Show problems as persistent notifications",
+          "notify_devices": "Mobile devices that receive problem notifications"
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigure Disk Monitor",
+        "description": "Change the agent's address, key, poll interval or notifications. Leave the API key empty to keep the current one.",
+        "data": {
+          "host": "Host name or address of the disk-agent",
+          "port": "Port (9431 for HTTPS, 9430 for HTTP)",
+          "use_ssl": "Use HTTPS",
+          "verify_ssl": "Verify the HTTPS certificate",
+          "api_key": "API key",
+          "scan_interval": "Seconds between polls",
+          "persistent_notifications": "Show problems as persistent notifications",
+          "notify_devices": "Mobile devices that receive problem notifications"
         }
       }
     },
     "error": {
       "cannot_connect": "The disk-agent could not be reached.",
-      "invalid_auth": "The disk-agent refused the credential.",
-      "credential_required": "Give the setup token or an API key."
+      "invalid_auth": "The disk-agent refused the API key.",
+      "credential_required": "An API key is required."
     },
     "abort": {
-      "already_configured": "This host is already configured."
-    }
-  },
-  "options": {
-    "step": {
-      "init": {
-        "title": "Disk Monitor options",
-        "data": {
-          "scan_interval": "Seconds between polls"
-        }
-      }
+      "already_configured": "This host is already configured.",
+      "unique_id_mismatch": "The address points at a different host than this entry."
     }
   },
   "entity": {

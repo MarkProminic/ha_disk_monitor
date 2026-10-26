@@ -1,0 +1,84 @@
+name: Production Build
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Version to build'
+        required: true
+        type: string
+      tag_name:
+        description: 'GitHub release tag'
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build'
+        required: true
+        type: string
+      tag_name:
+        description: 'GitHub release tag'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-integration:
+    name: Build integration
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set package variables
+        run: |
+          echo "VERSION=${{ inputs.version }}" >> $GITHUB_ENV
+          echo "PACKAGE_NAME=ha_disk_monitor" >> $GITHUB_ENV
+          echo "TAG_NAME=${{ inputs.tag_name }}" >> $GITHUB_ENV
+
+      - name: Stamp manifest version
+        run: |
+          yq -i -o json '.version="'${VERSION}'"' custom_components/${PACKAGE_NAME}/manifest.json
+          cat custom_components/${PACKAGE_NAME}/manifest.json
+
+      - name: Build integration archive
+        run: |
+          mkdir -p dist
+          cd custom_components/${PACKAGE_NAME}
+          zip -r "${GITHUB_WORKSPACE}/dist/${PACKAGE_NAME}.zip" ./
+
+      - name: Upload integration archive to release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${TAG_NAME}" "dist/${PACKAGE_NAME}.zip" --clobber
+
+      - name: Generate and upload SHA256SUMS
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd dist
+          sha256sum ${PACKAGE_NAME}.zip > SHA256SUMS.txt
+          gh release upload "${TAG_NAME}" SHA256SUMS.txt --clobber
+
+      - name: Generate and upload update-info.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DL="https://github.com/${{ github.repository }}/releases/download/${TAG_NAME}"
+          NOTES="$(gh release view "${TAG_NAME}" --json body --jq .body | jq -Rs .)"
+          cat > update-info.json << EOF
+          {
+            "version": "${VERSION}",
+            "releaseUrl": "https://github.com/${{ github.repository }}/releases/tag/${TAG_NAME}",
+            "releaseDate": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "changelog": "https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md",
+            "releaseNotes": ${NOTES},
+            "archiveUrl": "${DL}/${PACKAGE_NAME}.zip",
+            "checksumsUrl": "${DL}/SHA256SUMS.txt"
+          }
+          EOF
+          gh release upload "${TAG_NAME}" update-info.json --clobber

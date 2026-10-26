@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  workflow_call:
+  pull_request:
+    branches: ['main']
+
+permissions:
+  contents: read
+
+jobs:
+  hassfest:
+    name: Hassfest Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Run hassfest validation
+        uses: home-assistant/actions/hassfest@master
+
+  hacs:
+    name: HACS Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Run HACS validation
+        uses: hacs/action@main
+        with:
+          category: integration
+          ignore: brands

@@ -52,17 +52,24 @@ class DiskAgentClient:
         """GET /api/status, public."""
         return await self._request("GET", "/api/status", authenticated=False)
 
-    async def bootstrap(self, setup_token: str, name: str) -> str:
-        """POST /api/api-keys/bootstrap with the setup token; answers the minted key and keeps it."""
-        body = await self._request(
-            "POST",
-            "/api/api-keys/bootstrap",
-            json={"setup_token": setup_token, "name": name, "description": "Home Assistant Disk Monitor"},
-            authenticated=False,
-        )
-        self._api_key = body["api_key"]
-        return self._api_key
-
     async def report(self) -> dict:
         """GET /api/report."""
         return await self._request("GET", "/api/report")
+
+    async def resolve_key(self, credential: str, name: str) -> str:
+        """Make credential usable: an API key the agent accepts is kept as is; otherwise it is sent as the setup token to mint one, which is kept instead."""
+        self._api_key = credential
+        try:
+            await self.report()
+            return credential
+        except DiskAgentAuthError:
+            pass
+        body = await self._request(
+            "POST",
+            "/api/api-keys/bootstrap",
+            json={"setup_token": credential, "name": name, "description": "Home Assistant Disk Monitor"},
+            authenticated=False,
+        )
+        self._api_key = body["api_key"]
+        await self.report()
+        return self._api_key

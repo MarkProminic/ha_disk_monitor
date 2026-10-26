@@ -9,8 +9,9 @@ CONF_PORT = "port"
 CONF_USE_SSL = "use_ssl"
 CONF_VERIFY_SSL = "verify_ssl"
 CONF_API_KEY = "api_key"
-CONF_SETUP_TOKEN = "setup_token"
 CONF_SCAN_INTERVAL = "scan_interval"
+CONF_PERSISTENT = "persistent_notifications"
+CONF_NOTIFY_DEVICES = "notify_devices"
 
 DEFAULT_PORT = 9431
 DEFAULT_USE_SSL = True

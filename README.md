@@ -34,10 +34,9 @@ A disk whose SMART state is not passed or that smartctl cannot read, and a pool 
 
 ### Setup
 
-1. Install and start disk-agent on the host, then read its setup token from `/etc/disk-agent/setup.token`
+1. Install and start disk-agent on the host, then make a key with `disk-agent --config /etc/disk-agent key add homeassistant`
 2. Go to the *Integrations* page and click **+ ADD INTEGRATION**
 3. Select *Disk Monitor*
 4. Enter the host, the port (9431 for HTTPS, 9430 for HTTP), the API key, the poll interval, whether problems show as persistent notifications, and the mobile devices that receive them
-5. The API key is either one the agent already issued or its setup token, which mints one
 
 Every field can be changed later through the integration's Reconfigure action.

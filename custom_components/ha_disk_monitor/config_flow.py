@@ -68,10 +68,11 @@ class DiskMonitorConfigFlow(ConfigFlow, domain=DOMAIN):
         if not credential:
             return None, {"base": "credential_required"}
         session = async_get_clientsession(self.hass, verify_ssl=user_input[CONF_VERIFY_SSL])
-        client = DiskAgentClient(session, base_url(user_input), None)
+        client = DiskAgentClient(session, base_url(user_input), credential)
         try:
             status = await client.status()
-            key = await client.resolve_key(credential, f"home-assistant-{self.hass.config.location_name}")
+            await client.report()
+            key = credential
         except DiskAgentAuthError:
             return None, {"base": "invalid_auth"}
         except DiskAgentError as err:

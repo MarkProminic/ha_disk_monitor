@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Configure Disk Monitor",
-        "description": "Point at a disk-agent. The API key is either one the agent already issued or the setup token read from /etc/disk-agent/setup.token on the host, which mints one.",
+        "description": "Point at a disk-agent. The API key comes from `disk-agent key add NAME` on the host.",
         "data": {
           "host": "Host name or address of the disk-agent",
           "port": "Port (9431 for HTTPS, 9430 for HTTP)",

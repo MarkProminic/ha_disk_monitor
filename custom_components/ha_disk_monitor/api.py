@@ -12,7 +12,7 @@ class DiskAgentError(Exception):
 
 
 class DiskAgentAuthError(DiskAgentError):
-    """The agent refused the credential."""
+    """The agent refused the API key."""
 
 
 class DiskAgentClient:
@@ -22,23 +22,16 @@ class DiskAgentClient:
     answers the decoded JSON body or raises DiskAgentError.
     """
 
-    def __init__(self, session: aiohttp.ClientSession, base_url: str, api_key: str | None) -> None:
+    def __init__(self, session: aiohttp.ClientSession, base_url: str, api_key: str) -> None:
         self._session = session
         self._base_url = base_url.rstrip("/")
         self._api_key = api_key
 
-    @property
-    def api_key(self) -> str | None:
-        """The API key every authenticated call sends."""
-        return self._api_key
-
-    async def _request(self, method: str, path: str, json: dict | None = None, authenticated: bool = True) -> Any:
-        headers = {}
-        if authenticated and self._api_key:
-            headers["X-API-Key"] = self._api_key
+    async def _request(self, path: str, authenticated: bool = True) -> Any:
+        headers = {"X-API-Key": self._api_key} if authenticated else {}
         try:
             async with asyncio.timeout(60):
-                async with self._session.request(method, f"{self._base_url}{path}", json=json, headers=headers) as response:
+                async with self._session.get(f"{self._base_url}{path}", headers=headers) as response:
                     if response.status in (401, 403):
                         raise DiskAgentAuthError(f"{response.status} from {path}")
                     if response.status >= 400:
@@ -46,30 +39,12 @@ class DiskAgentClient:
                         raise DiskAgentError(f"{response.status} from {path}: {text[:200]}")
                     return await response.json()
         except (aiohttp.ClientError, asyncio.TimeoutError) as err:
-            raise DiskAgentError(f"{method} {path}: {err}") from err
+            raise DiskAgentError(f"GET {path}: {err}") from err
 
     async def status(self) -> dict:
         """GET /api/status, public."""
-        return await self._request("GET", "/api/status", authenticated=False)
+        return await self._request("/api/status", authenticated=False)
 
     async def report(self) -> dict:
         """GET /api/report."""
-        return await self._request("GET", "/api/report")
-
-    async def resolve_key(self, credential: str, name: str) -> str:
-        """Make credential usable: an API key the agent accepts is kept as is; otherwise it is sent as the setup token to mint one, which is kept instead."""
-        self._api_key = credential
-        try:
-            await self.report()
-            return credential
-        except DiskAgentAuthError:
-            pass
-        body = await self._request(
-            "POST",
-            "/api/api-keys/bootstrap",
-            json={"setup_token": credential, "name": name, "description": "Home Assistant Disk Monitor"},
-            authenticated=False,
-        )
-        self._api_key = body["api_key"]
-        await self.report()
-        return self._api_key
+        return await self._request("/api/report")

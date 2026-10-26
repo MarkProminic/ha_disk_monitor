@@ -1,5 +1,6 @@
 {
   "config": {
+    "flow_title": "{name}",
     "step": {
       "user": {
         "title": "Configure Disk Monitor",
@@ -10,21 +11,29 @@
           "use_ssl": "Use HTTPS",
           "verify_ssl": "Verify the HTTPS certificate",
           "api_key": "API key",
-          "scan_interval": "Seconds between polls",
+          "persistent_notifications": "Show problems as persistent notifications",
+          "notify_devices": "Mobile devices that receive problem notifications"
+        }
+      },
+      "discovery_confirm": {
+        "title": "Add {name}",
+        "description": "disk-agent found at {host}:{port}. The API key comes from `disk-agent key add NAME` on that host.",
+        "data": {
+          "verify_ssl": "Verify the HTTPS certificate",
+          "api_key": "API key",
           "persistent_notifications": "Show problems as persistent notifications",
           "notify_devices": "Mobile devices that receive problem notifications"
         }
       },
       "reconfigure": {
         "title": "Reconfigure Disk Monitor",
-        "description": "Change the agent's address, key, poll interval or notifications. Leave the API key empty to keep the current one.",
+        "description": "Change the agent's address, key or notifications. Leave the API key empty to keep the current one.",
         "data": {
           "host": "Host name or address of the disk-agent",
           "port": "Port (9431 for HTTPS, 9430 for HTTP)",
           "use_ssl": "Use HTTPS",
           "verify_ssl": "Verify the HTTPS certificate",
           "api_key": "API key",
-          "scan_interval": "Seconds between polls",
           "persistent_notifications": "Show problems as persistent notifications",
           "notify_devices": "Mobile devices that receive problem notifications"
         }

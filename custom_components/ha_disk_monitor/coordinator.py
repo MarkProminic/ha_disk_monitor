@@ -1,27 +1,27 @@
-"""Polls one disk-agent, keeps the device registry in step with its report and raises problem notifications."""
+"""Holds one disk-agent's report, keeps the device registry in step with it and raises problem notifications."""
 from __future__ import annotations
 
-from datetime import timedelta
+import asyncio
 import logging
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.storage import Store
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .api import DiskAgentClient, DiskAgentError
 from .const import (
     CONF_NOTIFY_DEVICES,
     CONF_PERSISTENT,
-    CONF_SCAN_INTERVAL,
     DATA_COLLECTED_AT,
     DATA_DISKS,
     DATA_HOSTNAME,
     DATA_POOLS,
     DATA_UNREADABLE,
-    DEFAULT_SCAN_INTERVAL,
     DOMAIN,
+    RECONNECT_FIRST_SECONDS,
+    RECONNECT_MAX_SECONDS,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -58,19 +58,21 @@ def pool_problem(pool: dict) -> bool:
 
 
 class DiskMonitorCoordinator(DataUpdateCoordinator[dict]):
-    """Fetches the agent report on the configured interval.
+    """Receives the agent's reports over its event stream.
 
     data holds hostname, collected_at, disks keyed by serial, pools keyed by
-    name and the unreadable device list. Devices for disks and pools that
-    left a report whose collection succeeded are removed from the device
-    registry; a report carrying disk_error or pool_error changes nothing. A disk or pool
-    that becomes a problem raises a persistent notification and a message to
-    the configured mobile devices once, until it clears and fails again.
+    name and the unreadable device list. The first report is fetched once at
+    setup; every later one arrives on the stream the agent pushes to, which
+    is reopened with exponential backoff when it drops. Devices for disks and
+    pools that left a report whose collection succeeded are removed from the
+    device registry; a report carrying disk_error or pool_error changes
+    nothing. A disk or pool that becomes a problem raises a persistent
+    notification and a message to the configured mobile devices once, until
+    it clears and fails again.
     """
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry, client: DiskAgentClient) -> None:
-        interval = entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
-        super().__init__(hass, _LOGGER, name=f"{DOMAIN} {entry.title}", update_interval=timedelta(seconds=interval))
+        super().__init__(hass, _LOGGER, name=f"{DOMAIN} {entry.title}", update_interval=None)
         self.entry = entry
         self.client = client
         self.known_disks: set[str] = set()
@@ -84,11 +86,27 @@ class DiskMonitorCoordinator(DataUpdateCoordinator[dict]):
         if data:
             self.notified = set(data.get("problems", []))
 
-    async def _async_update_data(self) -> dict:
-        try:
-            report = await self.client.report()
-        except DiskAgentError as err:
-            raise UpdateFailed(str(err)) from err
+    async def async_seed(self) -> None:
+        """Fetch the current report once so the entities exist before the stream opens."""
+        report = await self.client.report()
+        self.async_set_updated_data(await self._handle_report(report))
+
+    async def async_run(self) -> None:
+        """Consume the event stream until cancelled, reopening it with backoff when it drops."""
+        delay = RECONNECT_FIRST_SECONDS
+        while True:
+            try:
+                async for report in self.client.events():
+                    delay = RECONNECT_FIRST_SECONDS
+                    self.async_set_updated_data(await self._handle_report(report))
+                raise DiskAgentError("stream closed")
+            except DiskAgentError as err:
+                _LOGGER.warning("%s: event stream lost (%s), reconnecting in %ss", self.name, err, delay)
+                self.async_set_update_error(err)
+            await asyncio.sleep(delay)
+            delay = min(delay * 2, RECONNECT_MAX_SECONDS)
+
+    async def _handle_report(self, report: dict) -> dict:
         disks = {disk["serial"]: disk for disk in report.get("disks", [])}
         pools = {pool["name"]: pool for pool in report.get("pools", [])}
         hostname = report.get("hostname", self.entry.title)

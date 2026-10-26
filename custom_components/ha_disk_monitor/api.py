@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import AsyncIterator
+import json
 from typing import Any
 
 import aiohttp
@@ -27,16 +29,21 @@ class DiskAgentClient:
         self._base_url = base_url.rstrip("/")
         self._api_key = api_key
 
+    def _headers(self, authenticated: bool) -> dict[str, str]:
+        return {"X-API-Key": self._api_key} if authenticated else {}
+
+    @staticmethod
+    def _check(response: aiohttp.ClientResponse, path: str) -> None:
+        if response.status in (401, 403):
+            raise DiskAgentAuthError(f"{response.status} from {path}")
+        if response.status >= 400:
+            raise DiskAgentError(f"{response.status} from {path}")
+
     async def _request(self, path: str, authenticated: bool = True) -> Any:
-        headers = {"X-API-Key": self._api_key} if authenticated else {}
         try:
             async with asyncio.timeout(60):
-                async with self._session.get(f"{self._base_url}{path}", headers=headers) as response:
-                    if response.status in (401, 403):
-                        raise DiskAgentAuthError(f"{response.status} from {path}")
-                    if response.status >= 400:
-                        text = await response.text()
-                        raise DiskAgentError(f"{response.status} from {path}: {text[:200]}")
+                async with self._session.get(f"{self._base_url}{path}", headers=self._headers(authenticated)) as response:
+                    self._check(response, path)
                     return await response.json()
         except (aiohttp.ClientError, asyncio.TimeoutError) as err:
             raise DiskAgentError(f"GET {path}: {err}") from err
@@ -48,3 +55,23 @@ class DiskAgentClient:
     async def report(self) -> dict:
         """GET /api/report."""
         return await self._request("/api/report")
+
+    async def events(self) -> AsyncIterator[dict]:
+        """GET /api/events: yields each report the agent streams until the connection drops."""
+        path = "/api/events"
+        timeout = aiohttp.ClientTimeout(total=None, sock_connect=30, sock_read=None)
+        try:
+            async with self._session.get(f"{self._base_url}{path}", headers=self._headers(True), timeout=timeout) as response:
+                self._check(response, path)
+                data_lines: list[str] = []
+                async for raw in response.content:
+                    line = raw.decode("utf-8", "replace").rstrip("\r\n")
+                    if line == "":
+                        if data_lines:
+                            yield json.loads("\n".join(data_lines))
+                            data_lines = []
+                        continue
+                    if line.startswith("data:"):
+                        data_lines.append(line[5:].lstrip())
+        except (aiohttp.ClientError, asyncio.TimeoutError, json.JSONDecodeError) as err:
+            raise DiskAgentError(f"GET {path}: {err}") from err

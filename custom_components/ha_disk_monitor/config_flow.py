@@ -107,14 +107,30 @@ class DiskMonitorConfigFlow(ConfigFlow, domain=DOMAIN):
                 return self.async_create_entry(title=hostname, data=data)
         return self.async_show_form(step_id="user", data_schema=form_schema(user_input or {}, True), errors=errors)
 
+    async def _reachable_host(self, discovery_info: ZeroconfServiceInfo, use_ssl: bool) -> str:
+        """The first advertised IPv4 address whose status probe answers; an agent on several networks advertises every address it has."""
+        session = async_get_clientsession(self.hass, verify_ssl=False)
+        scheme = "https" if use_ssl else "http"
+        for address in discovery_info.ip_addresses:
+            if address.version != 4:
+                continue
+            host = str(address)
+            try:
+                await DiskAgentClient(session, f"{scheme}://{host}:{discovery_info.port}", "").status()
+            except DiskAgentError:
+                continue
+            return host
+        return discovery_info.host
+
     async def async_step_zeroconf(self, discovery_info: ZeroconfServiceInfo):
         """Offer an agent found on the network; a known one has its address updated."""
         properties = discovery_info.properties
         hostname = properties.get("hostname") or discovery_info.hostname.rstrip(".")
+        use_ssl = properties.get("scheme", "https") == "https"
         discovered = {
-            CONF_HOST: discovery_info.host,
+            CONF_HOST: await self._reachable_host(discovery_info, use_ssl),
             CONF_PORT: discovery_info.port,
-            CONF_USE_SSL: properties.get("scheme", "https") == "https",
+            CONF_USE_SSL: use_ssl,
         }
         await self.async_set_unique_id(hostname)
         self._abort_if_unique_id_configured(updates=discovered)

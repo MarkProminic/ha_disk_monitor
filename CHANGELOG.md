@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0](https://github.com/MarkProminic/ha_disk_monitor/compare/v0.2.1...v0.3.0) (2026-10-26)
+
+
+### Features
+
+* discover agents over mDNS and receive reports over their stream ([b92a50a](https://github.com/MarkProminic/ha_disk_monitor/commit/b92a50a3a152f64e6beec2848a56ee3b0b90a40d))
+
+
+### Bug Fixes
+
+* resolve the manifest merge, keep 0.2.1 with zeroconf discovery ([62b12c3](https://github.com/MarkProminic/ha_disk_monitor/commit/62b12c35be0a3ea2231fba72ae7847fabfc9acd9))
+
 ## [0.2.1](https://github.com/MarkProminic/ha_disk_monitor/compare/v0.2.0...v0.2.1) (2026-10-26)
 
 

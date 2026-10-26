@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/MarkProminic/ha_disk_monitor/compare/v0.3.0...v0.3.1) (2026-10-26)
+
+
+### Bug Fixes
+
+* discover an agent at the address that answers ([e9897d3](https://github.com/MarkProminic/ha_disk_monitor/commit/e9897d347c4bd0b107552c1f695c258aedb3e826))
+
 ## [0.3.0](https://github.com/MarkProminic/ha_disk_monitor/compare/v0.2.1...v0.3.0) (2026-10-26)
 
 
